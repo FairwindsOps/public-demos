@@ -1,0 +1,10 @@
+metrics:
+  serviceMonitor:
+    enabled: true
+    selector:
+      release: fw-prometheus
+configuration:
+  defaultContainerEnvs:
+    - name: RAY_USAGE_STATS_ENABLED
+      value: "0"
+

@@ -1,0 +1,24 @@
+apiVersion: kubeai.org/v1
+kind: Model
+metadata:
+  name: qwen2.5-7b-instruct
+  namespace: kai
+spec:
+  features: [TextGeneration]
+  url: hf://Qwen/Qwen2.5-7B-Instruct
+  engine: VLLM
+  cacheProfile: efs-dynamic
+  args:
+    - --max-model-len=8192
+    - --max-num-batched-token=8192
+    - --max-num-seqs=256
+    - --gpu-memory-utilization=0.9
+    - --kv-cache-dtype=fp8
+    - --enable-prefix-caching
+  env:
+    VLLM_ATTENTION_BACKEND: FLASHINFER
+  resourceProfile: nvidia-gpu-l4:1
+  minReplicas: 1
+  maxReplicas: 1
+  targetRequests: 250
+  scaleDownDelaySeconds: 45

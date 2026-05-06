@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    # `release: $HELM_RELEASE`: Prometheus can only detect PodMonitor with this label.
+    release: fw-prometheus
+  name: ray-head-monitor
+  namespace: kuberay
+spec:
+  jobLabel: ray-head
+  namespaceSelector:
+    matchNames:
+      - kuberay
+  # Only select Kubernetes Pods with "matchLabels".
+  selector:
+    matchLabels:
+      ray.io/node-type: head
+  # A list of endpoints allowed as part of this PodMonitor.
+  podMetricsEndpoints:
+    - port: "metrics"

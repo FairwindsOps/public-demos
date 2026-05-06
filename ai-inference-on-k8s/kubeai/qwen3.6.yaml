@@ -1,0 +1,29 @@
+apiVersion: kubeai.org/v1
+kind: Model
+metadata:
+  name: qwen3.6-27b
+  namespace: kai
+spec:
+  features: [TextGeneration]
+  url: hf://Qwen/Qwen3.6-27B
+  cacheProfile: efs-dynamic
+  engine: VLLM
+  args:
+    - -O0
+    - --max-model-len=8192
+    - --max-num-seqs=128
+    - --gpu-memory-utilization=0.9
+    - --kv-cache-dtype=fp8
+    - --enable-prefix-caching
+    - --tensor-parallel-size=4
+    - --pipeline-parallel-size=1
+    - --enable-auto-tool-choice
+    - --tool-call-parser=qwen3_coder
+    - --reasoning-parser=qwen3
+  env:
+    VLLM_ATTENTION_BACKEND: FLASHINFER
+  minReplicas: 1
+  maxReplicas: 1
+  targetRequests: 250
+  scaleDownDelaySeconds: 45
+  resourceProfile: nvidia-gpu-l4:4

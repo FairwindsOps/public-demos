@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: s3-access-check
+  namespace: dzone
+spec:
+  serviceAccountName: dzone
+  restartPolicy: Never
+  containers:
+    - name: awscli
+      image: public.ecr.aws/aws-cli/aws-cli:2.17.57
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "=== AWS identity ==="
+          aws sts get-caller-identity
+          echo
+          echo "=== Pod Identity env ==="
+          env | grep '^AWS_' || true
+          echo
+          echo "=== S3 list ==="
+          aws s3 ls s3://peeks-ray-models-338430314199/
+          echo
+          echo "=== S3 prefix list ==="
+          aws s3 ls s3://peeks-ray-models-338430314199/models/qwen2.5-1.5b-instruct/
