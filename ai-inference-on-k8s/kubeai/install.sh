@@ -8,4 +8,3 @@ helm upgrade --install kubeai kubeai/kubeai \
     --create-namespace \
     --wait
 
-helm upgrade --install prometheus prometheus-community/kube-prometheus-stack -f prometheus.values.yaml

@@ -1,0 +1,237 @@
+---
+# Grafana instance pre-wired to the in-cluster Prometheus, with the
+# vLLM dashboard provisioned for monitoring kubeai inference workloads.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: kai
+  labels:
+    app: grafana
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    deleteDatasources:
+      - name: Prometheus
+        orgId: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+  namespace: kai
+  labels:
+    app: grafana
+data:
+  providers.yaml: |
+    apiVersion: 1
+    providers:
+      - name: 'kubeai'
+        orgId: 1
+        folder: 'KubeAI'
+        type: file
+        disableDeletion: false
+        editable: true
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards
+---
+# vLLM dashboard (official vLLM project Grafana dashboard, simplified).
+# Reads core inference metrics exposed by vLLM /metrics:
+#   vllm:num_requests_running, vllm:num_requests_waiting,
+#   vllm:gpu_cache_usage_perc, vllm:prompt_tokens_total,
+#   vllm:generation_tokens_total, vllm:e2e_request_latency_seconds_*
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-vllm
+  namespace: kai
+  labels:
+    app: grafana
+data:
+  vllm.json: |
+    {
+      "title": "KubeAI / vLLM Inference",
+      "uid": "kubeai-vllm",
+      "schemaVersion": 39,
+      "version": 1,
+      "editable": true,
+      "refresh": "15s",
+      "time": {"from": "now-30m", "to": "now"},
+      "annotations": {"list": []},
+      "templating": {
+        "list": [
+          {
+            "name": "model",
+            "type": "query",
+            "datasource": {"type": "prometheus", "uid": "prometheus"},
+            "query": "label_values({__name__=~\"vllm:.+\", model_name!=\"\"}, model_name)",
+            "refresh": 2,
+            "includeAll": true,
+            "allValue": ".*",
+            "current": {"selected": true, "text": ["All"], "value": ["$__all"]},
+            "multi": true
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "timeseries", "title": "Running requests",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+          "targets": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (vllm:num_requests_running{model_name=~\"$model\"})", "legendFormat": "{{model_name}}", "editorMode": "code", "range": true, "instant": false}]
+        },
+        {
+          "type": "timeseries", "title": "Waiting (queued) requests",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+          "targets": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (vllm:num_requests_waiting{model_name=~\"$model\"})", "legendFormat": "{{model_name}}", "editorMode": "code", "range": true, "instant": false}]
+        },
+        {
+          "type": "timeseries", "title": "GPU KV-cache usage %",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+          "fieldConfig": {"defaults": {"unit": "percentunit", "max": 1, "min": 0}},
+          "targets": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "avg by (model_name) (vllm:gpu_cache_usage_perc{model_name=~\"$model\"})", "legendFormat": "{{model_name}}", "editorMode": "code", "range": true, "instant": false}]
+        },
+        {
+          "type": "timeseries", "title": "Token throughput (tok/s)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "targets": [
+            {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (rate(vllm:prompt_tokens_total{model_name=~\"$model\"}[1m]))", "legendFormat": "{{model_name}} prompt", "editorMode": "code", "range": true, "instant": false},
+            {"refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (rate(vllm:generation_tokens_total{model_name=~\"$model\"}[1m]))", "legendFormat": "{{model_name}} generation", "editorMode": "code", "range": true, "instant": false}
+          ]
+        },
+        {
+          "type": "timeseries", "title": "End-to-end request latency (p50/p95/p99)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+          "fieldConfig": {"defaults": {"unit": "s"}},
+          "targets": [
+            {"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "{{model_name}} p50", "editorMode": "code", "range": true, "instant": false},
+            {"refId": "B", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "{{model_name}} p95", "editorMode": "code", "range": true, "instant": false},
+            {"refId": "C", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, sum by (le, model_name) (rate(vllm:e2e_request_latency_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "{{model_name}} p99", "editorMode": "code", "range": true, "instant": false}
+          ]
+        },
+        {
+          "type": "timeseries", "title": "Request rate (req/s)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "targets": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (model_name) (rate(vllm:request_success_total{model_name=~\"$model\"}[1m]))", "legendFormat": "{{model_name}}", "editorMode": "code", "range": true, "instant": false}]
+        },
+        {
+          "type": "timeseries", "title": "Time to first token (p95)",
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "fieldConfig": {"defaults": {"unit": "s"}},
+          "targets": [{"refId": "A", "datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket{model_name=~\"$model\"}[5m])))", "legendFormat": "{{model_name}} p95", "editorMode": "code", "range": true, "instant": false}]
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-admin
+  namespace: kai
+type: Opaque
+stringData:
+  admin-user: admin
+  admin-password: admin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: kai
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
+        runAsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.1.4
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-user
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin
+                  key: admin-password
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: storage
+              mountPath: /var/lib/grafana
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: dashboard-providers
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: storage
+          emptyDir: {}
+        - name: datasources
+          configMap:
+            name: grafana-datasources
+        - name: dashboard-providers
+          configMap:
+            name: grafana-dashboard-providers
+        - name: dashboards
+          configMap:
+            name: grafana-dashboard-vllm
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: kai
+  labels:
+    app: grafana
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+  selector:
+    app: grafana

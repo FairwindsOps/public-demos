@@ -14,7 +14,8 @@ LOG_DIR="${LOG_DIR:-./logs}"
 declare -a PORT_FORWARDS=(
     "11436:kai:kubeai:80"           # Kubeai inference
     "8080:kai:open-webui:80"      # Open WebUI
-    "8081:kai:prometheus-grafana:80"  # Grafana
+    "8081:kai:grafana:3000"       # Grafana
+    "9090:kai:prometheus:9090"      # Prometheus
     "11435:ollama:ollama:11434"     # Ollama
 )
 
