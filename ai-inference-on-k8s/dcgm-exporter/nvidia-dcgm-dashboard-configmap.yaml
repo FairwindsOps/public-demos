@@ -1,0 +1,240 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-dcgm-dashboard
+  namespace: kai
+  labels:
+    # Picked up automatically by the kube-prometheus-stack Grafana sidecar.
+    grafana_dashboard: "1"
+    app: grafana
+data:
+  nvidia-dcgm.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 1,
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["nvidia", "gpu", "dcgm"],
+      "title": "NVIDIA DCGM Exporter",
+      "uid": "nvidia-dcgm-exporter",
+      "timezone": "",
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "30s",
+      "templating": {
+        "list": [
+          {
+            "name": "datasource",
+            "type": "datasource",
+            "query": "prometheus",
+            "current": { "text": "Prometheus", "value": "Prometheus" },
+            "hide": 0
+          },
+          {
+            "name": "instance",
+            "label": "Node",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "${datasource}" },
+            "query": "label_values(DCGM_FI_DEV_GPU_UTIL, Hostname)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "current": { "text": "All", "value": "$__all" }
+          },
+          {
+            "name": "gpu",
+            "label": "GPU",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "${datasource}" },
+            "query": "label_values(DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$instance\"}, gpu)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "current": { "text": "All", "value": "$__all" }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "row",
+          "title": "Overview",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+          "collapsed": false,
+          "id": 100
+        },
+        {
+          "type": "stat",
+          "title": "GPUs Reporting",
+          "id": 1,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+          "options": {
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "colorMode": "value",
+            "graphMode": "none"
+          },
+          "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }] } } },
+          "targets": [
+            { "expr": "count(count by (Hostname, gpu) (DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$instance\", gpu=~\"$gpu\"}))", "refId": "A" }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Avg GPU Utilization",
+          "id": 2,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 5, "x": 4, "y": 1 },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 90 }] } } },
+          "targets": [
+            { "expr": "avg(DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$instance\", gpu=~\"$gpu\"})", "refId": "A" }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Avg GPU Memory Used",
+          "id": 3,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 5, "x": 9, "y": 1 },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100, "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 90 }] } } },
+          "targets": [
+            { "expr": "avg(100 * DCGM_FI_DEV_FB_USED{Hostname=~\"$instance\", gpu=~\"$gpu\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\"$instance\", gpu=~\"$gpu\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\"$instance\", gpu=~\"$gpu\"}))", "refId": "A" }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Max GPU Temp",
+          "id": 4,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 5, "x": 14, "y": 1 },
+          "fieldConfig": { "defaults": { "unit": "celsius", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 75 }, { "color": "red", "value": 85 }] } } },
+          "targets": [
+            { "expr": "max(DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$instance\", gpu=~\"$gpu\"})", "refId": "A" }
+          ]
+        },
+        {
+          "type": "stat",
+          "title": "Total Power Draw",
+          "id": 5,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 4, "w": 5, "x": 19, "y": 1 },
+          "fieldConfig": { "defaults": { "unit": "watt", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 200 }, { "color": "red", "value": 350 }] } } },
+          "targets": [
+            { "expr": "sum(DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$instance\", gpu=~\"$gpu\"})", "refId": "A" }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Utilization",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+          "collapsed": false,
+          "id": 101
+        },
+        {
+          "type": "timeseries",
+          "title": "GPU Utilization (%)",
+          "id": 10,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_GPU_UTIL{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "{{Hostname}} / gpu {{gpu}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "GPU Memory Utilization (%)",
+          "id": 11,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
+          "targets": [
+            { "expr": "100 * DCGM_FI_DEV_FB_USED{Hostname=~\"$instance\", gpu=~\"$gpu\"} / (DCGM_FI_DEV_FB_USED{Hostname=~\"$instance\", gpu=~\"$gpu\"} + DCGM_FI_DEV_FB_FREE{Hostname=~\"$instance\", gpu=~\"$gpu\"})", "legendFormat": "{{Hostname}} / gpu {{gpu}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Framebuffer Memory Used (MiB)",
+          "id": 12,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+          "fieldConfig": { "defaults": { "unit": "decmbytes" } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_FB_USED{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "used {{Hostname}} / gpu {{gpu}}", "refId": "A" },
+            { "expr": "DCGM_FI_DEV_FB_FREE{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "free {{Hostname}} / gpu {{gpu}}", "refId": "B" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "SM / Tensor / Encoder Activity (%)",
+          "id": 13,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+          "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_ENC_UTIL{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "encoder {{Hostname}}/{{gpu}}", "refId": "A" },
+            { "expr": "DCGM_FI_DEV_DEC_UTIL{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "decoder {{Hostname}}/{{gpu}}", "refId": "B" },
+            { "expr": "DCGM_FI_PROF_SM_ACTIVE{Hostname=~\"$instance\", gpu=~\"$gpu\"} * 100", "legendFormat": "SM active {{Hostname}}/{{gpu}}", "refId": "C" },
+            { "expr": "DCGM_FI_PROF_PIPE_TENSOR_ACTIVE{Hostname=~\"$instance\", gpu=~\"$gpu\"} * 100", "legendFormat": "tensor active {{Hostname}}/{{gpu}}", "refId": "D" }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Thermals & Power",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 22 },
+          "collapsed": false,
+          "id": 102
+        },
+        {
+          "type": "timeseries",
+          "title": "GPU Temperature (°C)",
+          "id": 20,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 23 },
+          "fieldConfig": { "defaults": { "unit": "celsius" } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_GPU_TEMP{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "{{Hostname}} / gpu {{gpu}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Power Draw (W)",
+          "id": 21,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 23 },
+          "fieldConfig": { "defaults": { "unit": "watt" } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_POWER_USAGE{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "{{Hostname}} / gpu {{gpu}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "row",
+          "title": "Clocks & PCIe",
+          "gridPos": { "h": 1, "w": 24, "x": 0, "y": 31 },
+          "collapsed": false,
+          "id": 103
+        },
+        {
+          "type": "timeseries",
+          "title": "SM Clock (MHz)",
+          "id": 30,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+          "fieldConfig": { "defaults": { "unit": "MHz" } },
+          "targets": [
+            { "expr": "DCGM_FI_DEV_SM_CLOCK{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "{{Hostname}} / gpu {{gpu}}", "refId": "A" }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "PCIe Throughput (bytes/s)",
+          "id": 31,
+          "datasource": { "type": "prometheus", "uid": "${datasource}" },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+          "fieldConfig": { "defaults": { "unit": "Bps" } },
+          "targets": [
+            { "expr": "DCGM_FI_PROF_PCIE_TX_BYTES{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "tx {{Hostname}}/{{gpu}}", "refId": "A" },
+            { "expr": "DCGM_FI_PROF_PCIE_RX_BYTES{Hostname=~\"$instance\", gpu=~\"$gpu\"}", "legendFormat": "rx {{Hostname}}/{{gpu}}", "refId": "B" }
+          ]
+        }
+      ]
+    }

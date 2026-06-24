@@ -217,8 +217,12 @@ spec:
           configMap:
             name: grafana-dashboard-providers
         - name: dashboards
-          configMap:
-            name: grafana-dashboard-vllm
+          projected:
+            sources:
+              - configMap:
+                  name: grafana-dashboard-vllm
+              - configMap:
+                  name: nvidia-dcgm-dashboard
 ---
 apiVersion: v1
 kind: Service

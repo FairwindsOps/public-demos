@@ -1,0 +1,50 @@
+# Values for nvidia/dcgm-exporter
+# https://github.com/NVIDIA/dcgm-exporter/tree/main/deployment
+
+# Tolerate the same taints used by the ollama workload so we land on GPU nodes.
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+  - key: karpenter
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
+  - key: node.kubernetes.io/gpu
+    operator: Equal
+    value: "true"
+    effect: NoSchedule
+
+# Only schedule on nodes that actually expose NVIDIA GPUs.
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: nvidia.com/gpu.present
+              operator: In
+              values: ["true"]
+
+# Expose metrics on the standard port.
+service:
+  enable: true
+  type: ClusterIP
+  port: 9400
+
+# Create a ServiceMonitor so kube-prometheus-stack scrapes it automatically.
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  honorLabels: false
+  additionalLabels:
+    # Must match the `release` selector configured in your Prometheus CR.
+    # For a default kube-prometheus-stack install this is the Helm release name.
+    release: kube-prometheus-stack
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 512Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
