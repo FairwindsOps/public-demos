@@ -146,7 +146,8 @@ serviceAccount:
   name: ""
 
 # -- Map of annotations to add to the pods
-podAnnotations: {}
+podAnnotations:
+  karpenter.sh/do-not-disrupt: "true"
 
 # -- Map of labels to add to the pods
 podLabels: {}

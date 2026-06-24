@@ -1,3 +1,5 @@
+#!/bin/bash
+
 helm repo add kubeai https://www.kubeai.org
 helm repo update
 

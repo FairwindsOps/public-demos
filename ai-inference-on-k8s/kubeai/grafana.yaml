@@ -164,6 +164,8 @@ spec:
     metadata:
       labels:
         app: grafana
+      annotations:
+        karpenter.sh/do-not-disrupt: "true"
     spec:
       securityContext:
         fsGroup: 472
