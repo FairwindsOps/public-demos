@@ -3,8 +3,6 @@ kind: Model
 metadata:
   name: qwen2.5-7b-instruct
   namespace: kai
-  annotations:
-    karpenter.sh/do-not-disrupt: "true"
 spec:
   features: [TextGeneration]
   url: hf://Qwen/Qwen2.5-7B-Instruct

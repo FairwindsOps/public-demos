@@ -73,6 +73,12 @@ modelAutoscaling:
   interval: 15s
   timeWindow: 10m
 
+modelServerPods:
+  jsonPatches:
+    - op: add
+      path: /metadata/annotations/karpenter.sh~1do-not-disrupt
+      value: "true"
+
 metrics:
   prometheusOperator:
     vLLMPodMonitor:
