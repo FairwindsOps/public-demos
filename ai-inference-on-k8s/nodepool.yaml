@@ -1,0 +1,56 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: inference-workloads
+spec:
+  disruption:
+    budgets:
+    - nodes: 10%
+    consolidateAfter: 5m
+    consolidationPolicy: WhenEmpty
+  template:
+    metadata:
+      labels:
+        karpenter: "true"
+        nodepool: inference-workloads
+    spec:
+      expireAfter: 720h
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: inference-workloads
+      requirements:
+      - key: karpenter.k8s.aws/instance-family
+        operator: In
+        values:
+        - g4dn
+        - g5
+        - p5
+        - g6
+      - key: karpenter.k8s.aws/instance-size
+        operator: In
+        values:
+        - xlarge
+        - 2xlarge
+        - 4xlarge
+        - 8xlarge
+        - 12xlarge
+        - 24xlarge
+      - key: kubernetes.io/os
+        operator: In
+        values:
+        - linux
+      - key: kubernetes.io/arch
+        operator: In
+        values:
+        - amd64
+      - key: karpenter.sh/capacity-type
+        operator: In
+        values:
+        - spot
+        - on-demand
+      taints:
+      - effect: NoSchedule
+        key: node.kubernetes.io/gpu
+        value: "true"
+      terminationGracePeriod: 900s
