@@ -60,10 +60,18 @@ spec:
   podMetadata:
     annotations:
       karpenter.sh/do-not-disrupt: "true"
-  serviceMonitorSelector: {}
-  serviceMonitorNamespaceSelector: {}
-  podMonitorSelector: {}
-  podMonitorNamespaceSelector: {}
+  serviceMonitorSelector:
+    matchLabels:
+      scrape: kai
+  serviceMonitorNamespaceSelector:
+    matchLabels:
+      scrape: kai
+  podMonitorSelector:
+    matchLabels:
+      scrape: kai
+  podMonitorNamespaceSelector:
+    matchLabels:
+      scrape: kai
   probeSelector: {}
   probeNamespaceSelector: {}
   ruleSelector: {}
@@ -72,10 +80,10 @@ spec:
   retention: 7d
   resources:
     requests:
-      cpu: 100m
-      memory: 512Mi
+      cpu: 1
+      memory: 4Gi
     limits:
-      memory: 2Gi
+      memory: 4Gi
   enableAdminAPI: false
 ---
 apiVersion: v1

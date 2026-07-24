@@ -12,11 +12,11 @@ LOG_DIR="${LOG_DIR:-./logs}"
 # Define your port forwards here
 # Format: "LOCAL_PORT:NAMESPACE:SERVICE_NAME:POD_PORT"
 declare -a PORT_FORWARDS=(
-    "11436:kai:kubeai:80"           # Kubeai inference
-    "8080:kai:open-webui:80"      # Open WebUI
+    "11437:kai:kubeai:80"           # Kubeai inference
+    "8080:kai:kubeai-open-webui:80"      # Open WebUI
     "8081:kai:grafana:3000"       # Grafana
     "9090:kai:prometheus:9090"      # Prometheus
-    "11435:ollama:ollama:11434"     # Ollama
+    #"11435:ollama:ollama:11434"     # Ollama
 )
 
 log() {

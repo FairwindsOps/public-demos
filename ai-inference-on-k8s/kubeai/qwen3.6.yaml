@@ -22,7 +22,7 @@ spec:
     - --reasoning-parser=qwen3
   env:
     VLLM_ATTENTION_BACKEND: FLASHINFER
-  minReplicas: 1
+  minReplicas: 0
   maxReplicas: 1
   targetRequests: 250
   scaleDownDelaySeconds: 45

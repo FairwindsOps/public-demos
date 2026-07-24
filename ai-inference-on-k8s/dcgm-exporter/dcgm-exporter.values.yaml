@@ -34,12 +34,15 @@ service:
 # Create a ServiceMonitor so kube-prometheus-stack scrapes it automatically.
 serviceMonitor:
   enabled: true
-  interval: 15s
   honorLabels: false
   additionalLabels:
-    # Must match the `release` selector configured in your Prometheus CR.
-    # For a default kube-prometheus-stack install this is the Helm release name.
-    release: kube-prometheus-stack
+    scrape: kai
+
+# Use simple counters that don't require the profiling module
+# The default counters need profiling which fails on some setups
+arguments:
+  - "-f"
+  - "/etc/dcgm-exporter/dcp-metrics-included.csv"
 
 resources:
   requests:
@@ -51,3 +54,5 @@ resources:
 
 podAnnotations:
   karpenter.sh/do-not-disrupt: "true"
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9400"

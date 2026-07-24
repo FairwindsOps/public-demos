@@ -10,3 +10,4 @@ helm upgrade --install kubeai kubeai/kubeai \
     --create-namespace \
     --wait
 
+kubectl label namespace kai scrape=kai --overwrite

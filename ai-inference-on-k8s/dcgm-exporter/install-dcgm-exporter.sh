@@ -14,7 +14,7 @@ helm repo add gpu-helm-charts https://nvidia.github.io/dcgm-exporter/helm-charts
 helm repo update gpu-helm-charts
 
 helm upgrade --install dcgm-exporter gpu-helm-charts/dcgm-exporter \
-  --namespace gpu-monitoring --create-namespace \
+  --namespace kai --create-namespace \
   --values "${SCRIPT_DIR}/dcgm-exporter.values.yaml"
 
 # Install the standard NVIDIA DCGM Grafana dashboard (sidecar will auto-import).
