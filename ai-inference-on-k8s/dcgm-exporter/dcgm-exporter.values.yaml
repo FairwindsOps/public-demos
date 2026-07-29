@@ -53,6 +53,5 @@ resources:
     memory: 512Mi
 
 podAnnotations:
-  karpenter.sh/do-not-disrupt: "true"
   prometheus.io/scrape: "true"
   prometheus.io/port: "9400"
